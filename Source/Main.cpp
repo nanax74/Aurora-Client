@@ -1,4 +1,5 @@
-#include <winsock.h>
+#include <winsock2.h>
+#include "Net/Client.hpp"
 
 bool initWinsock()
 {
@@ -12,15 +13,16 @@ void cleanupWinsock()
     WSACleanup();
 }
 
-void socketTest()
-{
-    initWinsock();
-
-    cleanupWinsock();
-}
-
 int main(int argc, char** argv)
 {
-    socketTest();
+    if (!initWinsock()) return 1;
+
+    Net::Client client;
+    if(client.connect("192.168.68.201", 55555))
+    {
+        
+    }
+
+    cleanupWinsock();
     return 0;
 }
