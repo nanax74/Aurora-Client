@@ -27,9 +27,5 @@ namespace Net
 
         bool send(const std::vector<std::byte>& data) override;
         std::vector<std::byte> receive() override;
-
-        void onReadable() override;
-        void onWritable() override;
-        void onDisconnected() override;
     };
 }

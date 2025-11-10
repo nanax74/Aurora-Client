@@ -9,7 +9,7 @@ INCLUDE ?= Include
 # Prepare
 #===============================================================================
 CXX := g++
-CXXFLAGS += -I$(INCLUDE)
+CXXFLAGS += $(foreach dir,$(INCLUDE),-I$(dir))
 
 SOURCES := $(shell find $(SOURCE) -name '*.cpp')
 OBJECTS := $(patsubst $(SOURCE)/%.cpp, $(BUILD)/%.o, $(SOURCES))

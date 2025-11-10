@@ -21,6 +21,7 @@ namespace Net
 		bool connect(const char* ipAddress, uint16_t port);
 		void disconnect();
 
-		void send();
+		void sendString(const std::string& data);
+		void send(const std::vector<std::byte>& data);
 	};
 }

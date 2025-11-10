@@ -1,6 +1,3 @@
-/*
- * Remember to link to ws2_32.lib
- */
 #include <memory>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -22,7 +19,15 @@ namespace Net
     bool TcpConnectorSocket::connect()
     {
         fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (fd == INVALID_SOCKET) {
+        if (fd == INVALID_SOCKET)
+        {
+            return false;
+        }
+
+        int flag = 1;
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag)) < 0)
+        {
+            perror("setsockopt(TCP_NODELAY) failed");
             return false;
         }
 
@@ -46,7 +51,7 @@ namespace Net
     std::vector<std::byte> TcpConnectorSocket::receive()
     {
         if (fd == INVALID_SOCKET) return {};
-    
+
         u_long available = 0;
         if (ioctlsocket(fd, FIONREAD, &available) != 0) {
             return {};
@@ -60,7 +65,7 @@ namespace Net
         {
             return {};
         }
-        
+
         buffer.resize((res));
         return buffer;
     }
