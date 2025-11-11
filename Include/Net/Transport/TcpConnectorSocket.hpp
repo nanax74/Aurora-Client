@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdint>
 #include <memory>
+#include <functional>
 #include <winsock2.h>
 
 #include "Net/Transport/IConnectorSocket.hpp"
@@ -12,7 +13,6 @@ namespace Net::Transport
     class TcpConnectorSocket : public IConnectorSocket
     {
     private:
-        SOCKET fd;
         std::string ip;
         uint16_t port;
 
@@ -23,9 +23,6 @@ namespace Net::Transport
         
         static std::unique_ptr<TcpConnectorSocket> create(std::string ip, uint16_t port);
 
-        bool connect();
-
-        bool send(const std::vector<std::byte>& data) override;
-        std::vector<std::byte> receive() override;
+        std::shared_ptr<IConnectionSocket> connect(std::function<void(std::shared_ptr<IConnectionSocket>, std::vector<std::byte>)> onReceive) override;
     };
 }

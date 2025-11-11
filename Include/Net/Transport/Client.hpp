@@ -4,24 +4,31 @@
 #include <memory>
 #include <thread>
 
-#include "Net/Transport/Connector.hpp"
+#include "Net/Transport/Connection.hpp"
+#include "Net/Protocol/Registry.hpp"
 
 namespace Net::Transport
 {
 	class Client
 	{
 	private:
-		std::unique_ptr<Connector> connector;
+		std::shared_ptr<Connection> connection;
 		std::thread receiveThread;
 		bool isRunning = false;
 
 		void receiveLoop();
 
+		std::shared_ptr<Protocol::Registry> registry;
+		std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher;
+
 	public:
-		std::unique_ptr<Connector> connect(const char* ipAddress, uint16_t port);
+		Client(std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher = nullptr);
+
+		bool connect(const char* ipAddress, uint16_t port);
 		void disconnect();
 
-		void sendString(const std::string& data);
-		void send(const std::vector<std::byte>& data);
+		void send(std::unique_ptr<Protocol::IData> data);
+
+		void onReceive(std::vector<std::byte> data);
 	};
 }

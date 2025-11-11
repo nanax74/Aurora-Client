@@ -1,16 +1,28 @@
 #include <chrono>
-#include <iostream>
+#include <memory>
 #include <vector>
 
-#include "Net/Transport/Client.hpp"
 #include "Data/ByteReader.hpp"
+#include "Net/Protocol/IData.hpp"
+#include "Net/Protocol/Processor.hpp"
+#include "Net/Transport/Client.hpp"
+#include "Net/Transport/Connection.hpp"
+#include "Net/Transport/IConnectionSocket.hpp"
+#include "Net/Transport/TcpConnectorSocket.hpp"
+#include "Debug/Logger.hpp"
 
-namespace Net
+namespace Net::Transport
 {
+    Client::Client(std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher) : registry(std::shared_ptr<Protocol::Registry>(new Protocol::Registry())), dispatcher(dispatcher)
+    {
+        Protocol::Processor::registerData(registry);
+    }
+
     bool Client::connect(const char* ipAddress, uint16_t port)
     {
-        connector = TcpConnectorSocket::create(ipAddress, port);
-        if (!connector->connect())
+        auto connector = TcpConnectorSocket::create(ipAddress, port);
+        connection = std::shared_ptr<Connection>(new Connection(connector->connect([this](std::shared_ptr<IConnectionSocket> socket, std::vector<std::byte> data){ this->onReceive(data); })));
+        if(!connection)
         {
             return false;
         }
@@ -26,23 +38,14 @@ namespace Net
         {
             receiveThread.join();
         }
-        connector.reset();
+        connection.reset();
     }
 
-    void Client::sendString(const std::string& data)
+    void Client::send(std::unique_ptr<Protocol::IData> data)
     {
-        if (connector)
+        if (connection)
         {
-            std::vector<std::byte> byteData(reinterpret_cast<const std::byte*>(data.data()), reinterpret_cast<const std::byte*>(data.data() + data.size()));
-            connector->send(byteData);
-        }
-    }
-
-    void Client::send(const std::vector<std::byte>& data)
-    {
-        if (connector)
-        {
-            connector->send(data);
+            connection->send(std::move(data));
         }
     }
 
@@ -50,17 +53,33 @@ namespace Net
     {
         while (isRunning)
         {
-            if (connector)
+            if (connection)
             {
-                std::vector<std::byte> receivedData = connector->receive();
-                if (!receivedData.empty())
-                {
-                    Data::ByteReader reader(receivedData);
-                    std::string message = reader.readString();
-                    std::cout << "Message: " << message << std::endl;
-                }
+                auto received = connection->getSocket()->receive();
+                if(received) onReceive(received.value());
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Prevent busy-waiting
         }
+    }
+
+    void Client::onReceive(std::vector<std::byte> data)
+    {
+        Debug::Logger::printf("Received data from socket. Data size: {}", data.size());
+
+        if (data.size() < sizeof(Protocol::ID))
+        {
+            Debug::Logger::printf("Received data size ({}) is less than Protocol::ID size ({}). Dispatching InvalidData.", data.size(), sizeof(Protocol::ID));
+            return;
+        }
+
+        Data::ByteReader reader(data);
+        Protocol::ID id = static_cast<Protocol::ID>(reader.read<int>());
+        Debug::Logger::printf("Extracted Protocol::ID: {}", static_cast<uint32_t>(id));
+
+        std::vector<std::byte> payload(reader.readBytes(reader.remain()));
+        Debug::Logger::printf("Creating IData from payload with size: {}", payload.size());
+        std::unique_ptr<Protocol::IData> protocolData(registry->deserialize(id, payload));
+        Debug::Logger::printf("Dispatching data for Protocol::ID: {}", static_cast<uint32_t>(id));
+        protocolData->process(connection);
     }
 }

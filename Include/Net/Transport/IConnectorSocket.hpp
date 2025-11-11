@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <winsock2.h>
+#include <memory>
+#include <functional>
+#include "Net/Transport/IConnectionSocket.hpp"
 
 namespace Net::Transport
 {
@@ -9,7 +10,6 @@ namespace Net::Transport
     {
     public:
         virtual ~IConnectorSocket() = default;
-        virtual bool send(const std::vector<std::byte>& data) = 0;
-        virtual std::vector<std::byte> receive() = 0;
+        virtual std::shared_ptr<IConnectionSocket> connect(std::function<void(std::shared_ptr<IConnectionSocket>, std::vector<std::byte>)> onReceive) = 0;
     };
 }

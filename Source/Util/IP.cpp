@@ -3,7 +3,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#include "Net/Util/IP.hpp"
+#include "Util/IP.hpp"
 
 namespace Net::Util
 {
