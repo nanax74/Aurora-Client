@@ -59,6 +59,7 @@ namespace Net::Protocol::Entry
 
     void Pong::process(std::shared_ptr<Transport::Connection> connection)
     {
-        Debug::Logger::printf("Pong: {}", timestamp);
+        uint64_t delay = Util::Time::getNow() - timestamp;
+        Debug::Logger::printf("Pong: {}ms", delay);
     }
 }
