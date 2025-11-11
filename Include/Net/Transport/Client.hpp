@@ -4,21 +4,21 @@
 #include <memory>
 #include <thread>
 
-#include "Net/TcpConnectorSocket.hpp"
+#include "Net/Transport/Connector.hpp"
 
-namespace Net
+namespace Net::Transport
 {
 	class Client
 	{
 	private:
-		std::unique_ptr<TcpConnectorSocket> connector;
+		std::unique_ptr<Connector> connector;
 		std::thread receiveThread;
 		bool isRunning = false;
 
 		void receiveLoop();
 
 	public:
-		bool connect(const char* ipAddress, uint16_t port);
+		std::unique_ptr<Connector> connect(const char* ipAddress, uint16_t port);
 		void disconnect();
 
 		void sendString(const std::string& data);

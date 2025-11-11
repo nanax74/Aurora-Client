@@ -4,8 +4,8 @@
 TARGET := Aurora-Client
 DIST := Dist
 BUILD := Build
-SOURCE := Source
-INCLUDE := Include ../Include/Protocol
+SOURCE := Source ../Common/Source
+INCLUDE := Include ../Common/Include
 
 CXXFLAGS := -std=c++23 -Wall -O2
 LDFLAGS := -lws2_32

@@ -3,7 +3,7 @@
 #include <vector>
 #include <winsock2.h>
 
-namespace Net
+namespace Net::Transport
 {
     class IConnectorSocket
     {

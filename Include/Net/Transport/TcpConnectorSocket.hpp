@@ -5,9 +5,9 @@
 #include <memory>
 #include <winsock2.h>
 
-#include "Net/IConnectorSocket.hpp"
+#include "Net/Transport/IConnectorSocket.hpp"
 
-namespace Net
+namespace Net::Transport
 {
     class TcpConnectorSocket : public IConnectorSocket
     {

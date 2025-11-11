@@ -32,7 +32,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < 5; ++i)
         {
             std::string message = "Hello from client " + std::to_string(i);
-            ByteWriter writer;
+            Data::ByteWriter writer;
             writer.write<int>(0x1);
             writer.writeString(message);
             client.send(writer.data());

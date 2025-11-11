@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-#include "Net/Client.hpp"
+#include "Net/Transport/Client.hpp"
 #include "Data/ByteReader.hpp"
 
 namespace Net
@@ -56,8 +56,7 @@ namespace Net
                 if (!receivedData.empty())
                 {
                     Data::ByteReader reader(receivedData);
-                    int length = reader.read<int>();
-                    std::string message = reader.readString(length);
+                    std::string message = reader.readString();
                     std::cout << "Message: " << message << std::endl;
                 }
             }
