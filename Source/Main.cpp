@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 #include <cstdio>
+#include <iostream>
+#include "Debug/Logger.hpp"
 #include "Net/Protocol/Entry.hpp"
 #include "Net/Transport/Client.hpp"
 
@@ -21,6 +23,7 @@ void cleanupWinsock()
 
 int main(int argc, char** argv)
 {
+    Debug::Logger::init();
     if (!initWinsock()) return 1;
 
     Net::Transport::Client client;
@@ -29,11 +32,20 @@ int main(int argc, char** argv)
         printf("Connected to server.\n");
 
         // Example: Send messages
-        for (int i = 0; i < 5; ++i)
+        while(true)
         {
-            std::unique_ptr<Net::Protocol::Entry::Ping> ping = std::unique_ptr<Net::Protocol::Entry::Ping>(new Net::Protocol::Entry::Ping());
-            client.send(std::move(ping));
-            printf("Sent ping\n");
+            std::string cmd;
+            std::cin >> cmd;
+            if(cmd == "exit") break;
+            if(cmd == "ping")
+            {
+                std::unique_ptr<Net::Protocol::Entry::Ping> ping = std::unique_ptr<Net::Protocol::Entry::Ping>(new Net::Protocol::Entry::Ping());
+                client.send(std::move(ping));
+            }
+            else
+            {
+                std::cout << "Unknown command: " << cmd << std::endl;
+            }
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 
@@ -46,5 +58,6 @@ int main(int argc, char** argv)
     }
 
     cleanupWinsock();
+    Debug::Logger::shutdown();
     return 0;
 }

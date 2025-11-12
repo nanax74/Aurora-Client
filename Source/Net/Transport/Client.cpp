@@ -64,8 +64,6 @@ namespace Net::Transport
 
     void Client::onReceive(std::vector<std::byte> data)
     {
-        Debug::Logger::printf("Received data from socket. Data size: {}", data.size());
-
         if (data.size() < sizeof(Protocol::ID))
         {
             Debug::Logger::printf("Received data size ({}) is less than Protocol::ID size ({}). Dispatching InvalidData.", data.size(), sizeof(Protocol::ID));
@@ -74,12 +72,10 @@ namespace Net::Transport
 
         Data::ByteReader reader(data);
         Protocol::ID id = static_cast<Protocol::ID>(reader.read<int>());
-        Debug::Logger::printf("Extracted Protocol::ID: {}", static_cast<uint32_t>(id));
+        Debug::Logger::printf("[Received] ID: {}", static_cast<uint32_t>(id));
 
         std::vector<std::byte> payload(reader.readBytes(reader.remain()));
-        Debug::Logger::printf("Creating IData from payload with size: {}", payload.size());
         std::unique_ptr<Protocol::IData> protocolData(registry->deserialize(id, payload));
-        Debug::Logger::printf("Dispatching data for Protocol::ID: {}", static_cast<uint32_t>(id));
         protocolData->process(connection);
     }
 }
