@@ -36,17 +36,27 @@ int main(int argc, char** argv)
         {
             std::string cmd;
             std::cin >> cmd;
-            if(cmd == "exit") break;
-            if(cmd == "ping")
+            if(cmd == "exit")
             {
-                std::unique_ptr<Net::Protocol::Entry::Ping> ping = std::unique_ptr<Net::Protocol::Entry::Ping>(new Net::Protocol::Entry::Ping());
+                break;
+            }
+            else if(cmd == "ping")
+            {
+                std::unique_ptr<Net::Protocol::Entry::Ping> ping = std::make_unique<Net::Protocol::Entry::Ping>();
                 client.send(std::move(ping));
+            }
+            else if(cmd == "notification")
+            {
+                std::string msg;
+                std::getline(std::cin, msg);
+                std::unique_ptr<Net::Protocol::Entry::Notification> notification = std::make_unique<Net::Protocol::Entry::Notification>(msg);
+                client.send(std::move(notification));
             }
             else
             {
                 std::cout << "Unknown command: " << cmd << std::endl;
             }
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
 
         client.disconnect();
