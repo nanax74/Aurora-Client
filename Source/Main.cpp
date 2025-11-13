@@ -95,6 +95,75 @@ int main(int argc, char** argv)
                 std::unique_ptr<Net::Protocol::Entry::WriteMemorySuper> writeMemorySuper = std::make_unique<Net::Protocol::Entry::WriteMemorySuper>(address, value);
                 client.send(std::move(writeMemorySuper));
             }
+            else if(cmd == "input")
+            {
+                std::string type;
+                std::cin >> type;
+
+                std::string temp;
+                try
+                {
+                    if(type == "button")
+                    {
+                        uint32_t button;
+                        uint32_t timeMs;
+
+                        std::cin >> temp;
+                        button = std::stoul(temp, nullptr, 16);
+                        std::cin >> temp;
+                        timeMs = std::stoul(temp);
+
+                        std::unique_ptr<Net::Protocol::Entry::InputButton> input = std::make_unique<Net::Protocol::Entry::InputButton>(button, timeMs);
+                        client.send(std::move(input));
+                    }
+                    else if(type == "lstick")
+                    {
+                        float x;
+                        float y;
+                        uint32_t timeMs;
+
+                        std::cin >> temp;
+                        x = std::stof(temp);
+                        std::cin >> temp;
+                        y = std::stof(temp);
+                        std::cin >> temp;
+                        if (!temp.empty() && temp[0] == '-')
+                        {
+                            throw std::invalid_argument("negative value not allowed");
+                        }
+                        timeMs = static_cast<unsigned int>(std::stoul(temp));
+
+                        std::unique_ptr<Net::Protocol::Entry::InputLeftStick> input = std::make_unique<Net::Protocol::Entry::InputLeftStick>(x, y, timeMs);
+                        client.send(std::move(input));
+                    }
+                    else if(type == "rstick")
+                    {
+                        float x;
+                        float y;
+                        uint32_t timeMs;
+
+                        std::cin >> temp;
+                        x = std::stof(temp);
+                        std::cin >> temp;
+                        y = std::stof(temp);
+                        std::cin >> temp;
+                        timeMs = std::stoul(temp);
+
+                        std::unique_ptr<Net::Protocol::Entry::InputRightStick> input = std::make_unique<Net::Protocol::Entry::InputRightStick>(x, y, timeMs);
+                        client.send(std::move(input));
+                    }
+                    else if(type == "clear")
+                    {
+                        std::unique_ptr<Net::Protocol::Entry::InputClear> input = std::make_unique<Net::Protocol::Entry::InputClear>();
+                        client.send(std::move(input));
+                    }
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    std::cout << "[Invalid argument: " << e.what() << "] [Arg: " << temp << "]" << std::endl;
+                    continue;
+                }
+            }
             else
             {
                 std::cout << "Unknown command: " << cmd << std::endl;
