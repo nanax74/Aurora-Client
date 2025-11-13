@@ -92,8 +92,8 @@ int main(int argc, char** argv)
                     continue;
                 }
 
-                std::unique_ptr<Net::Protocol::Entry::WriteMemory> writeMemory = std::make_unique<Net::Protocol::Entry::WriteMemory>(address, value);
-                client.send(std::move(writeMemory));
+                std::unique_ptr<Net::Protocol::Entry::WriteMemorySuper> writeMemorySuper = std::make_unique<Net::Protocol::Entry::WriteMemorySuper>(address, value);
+                client.send(std::move(writeMemorySuper));
             }
             else
             {
