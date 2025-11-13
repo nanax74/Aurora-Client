@@ -76,6 +76,7 @@ namespace Net::Transport
 
         std::vector<std::byte> payload(reader.readBytes(reader.remain()));
         std::unique_ptr<Protocol::IData> protocolData(registry->deserialize(id, payload));
+        if(protocolData == nullptr) return;
         protocolData->process(connection);
     }
 }

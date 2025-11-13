@@ -26,6 +26,12 @@ namespace Net::Transport
         }
 
         int flag = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag)) < 0)
+        {
+            perror("setsockopt(SO_REUSEADDR) failed");
+            return nullptr;
+        }
+
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag)) < 0)
         {
             perror("setsockopt(TCP_NODELAY) failed");

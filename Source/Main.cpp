@@ -8,6 +8,7 @@
 #include "Debug/Logger.hpp"
 #include "Net/Protocol/Entry.hpp"
 #include "Net/Transport/Client.hpp"
+#include "Util/String.hpp"
 
 bool initWinsock()
 {
@@ -51,6 +52,48 @@ int main(int argc, char** argv)
                 std::getline(std::cin, msg);
                 std::unique_ptr<Net::Protocol::Entry::Notification> notification = std::make_unique<Net::Protocol::Entry::Notification>(msg);
                 client.send(std::move(notification));
+            }
+            else if(cmd == "read")
+            {
+                std::string input;
+                uint32_t address;
+                uint32_t size;
+                try
+                {
+                    std::cin >> input;
+                    address = std::stoul(input, nullptr, 16);
+                    std::cin >> input;
+                    size = std::stoul(input, nullptr, 16);
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    std::cout << "Invalid argument: " << input << std::endl;
+                    continue;
+                }
+
+                std::unique_ptr<Net::Protocol::Entry::ReadMemory> readMemory = std::make_unique<Net::Protocol::Entry::ReadMemory>(address, size);
+                client.send(std::move(readMemory));
+            }
+            else if(cmd == "write")
+            {
+                std::string input;
+                uint32_t address;
+                std::vector<std::byte> value;
+                try
+                {
+                    std::cin >> input;
+                    address = std::stoul(input, nullptr, 16);
+                    std::cin >> input;
+                    value = Util::String::fromHexString(input);
+                }
+                catch (const std::invalid_argument& e)
+                {
+                    std::cout << "[Invalid argument: " << e.what() << "] [Arg: " << input << "]" << std::endl;
+                    continue;
+                }
+
+                std::unique_ptr<Net::Protocol::Entry::WriteMemory> writeMemory = std::make_unique<Net::Protocol::Entry::WriteMemory>(address, value);
+                client.send(std::move(writeMemory));
             }
             else
             {
