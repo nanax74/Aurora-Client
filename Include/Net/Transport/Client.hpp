@@ -3,32 +3,43 @@
 #include <cstdint>
 #include <memory>
 #include <thread>
+#include <atomic>
+#include <string>
+#include <vector>
 
 #include "Net/Transport/Connection.hpp"
 #include "Net/Protocol/Registry.hpp"
 
 namespace Net::Transport
 {
-	class Client
-	{
-	private:
-		std::shared_ptr<Connection> connection;
-		std::thread receiveThread;
-		bool isRunning = false;
+    class Client
+    {
+    private:
+        std::shared_ptr<Connection> connection;
 
-		void receiveLoop();
+        std::thread receiveThread;
+        std::atomic_bool isRunning{false};
+        std::atomic_bool reconnecting{false};
 
-		std::shared_ptr<Protocol::Registry> registry;
-		std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher;
+        std::string lastIp;
+        uint16_t lastPort = 0;
 
-	public:
-		Client(std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher = nullptr);
+        std::shared_ptr<Protocol::Registry> registry;
 
-		bool connect(const char* ipAddress, uint16_t port);
-		void disconnect();
+        void receiveLoop();
 
-		void send(std::unique_ptr<Protocol::IData> data);
+    public:
+        Client();
+        ~Client();  // 追加: 安全にスレッドを止める
 
-		void onReceive(std::vector<std::byte> data);
-	};
+        bool connect(const std::string& ipAddress, uint16_t port);
+        void disconnect();
+
+        void send(std::unique_ptr<Protocol::IData> data);
+
+        void onReceive(const std::vector<std::byte>& data);
+        void onDisconnect();
+
+        bool isConnected() const;
+    };
 }

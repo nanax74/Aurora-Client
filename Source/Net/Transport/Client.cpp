@@ -1,6 +1,8 @@
 #include <chrono>
 #include <memory>
 #include <vector>
+#include <atomic>
+#include <thread>
 
 #include "Data/ByteReader.hpp"
 #include "Net/Protocol/IData.hpp"
@@ -13,70 +15,142 @@
 
 namespace Net::Transport
 {
-    Client::Client(std::function<void(std::shared_ptr<Protocol::Registry>, std::unique_ptr<Connection>, std::unique_ptr<Protocol::IData>)> dispatcher) : registry(std::shared_ptr<Protocol::Registry>(new Protocol::Registry())), dispatcher(dispatcher)
+    Client::Client() : registry(std::make_shared<Protocol::Registry>())
     {
         Protocol::Processor::registerData(registry);
+        reconnecting.store(false);
+        isRunning.store(false);
     }
 
-    bool Client::connect(const char* ipAddress, uint16_t port)
+    Client::~Client()
     {
+        disconnect();
+    }
+
+    bool Client::connect(const std::string& ipAddress, uint16_t port)
+    {
+        lastIp = ipAddress;
+        lastPort = port;
+
         auto connector = TcpConnectorSocket::create(ipAddress, port);
-        connection = std::shared_ptr<Connection>(new Connection(connector->connect([this](std::shared_ptr<IConnectionSocket> socket, std::vector<std::byte> data){ this->onReceive(data); })));
-        if(!connection)
+        auto socket = connector->connect(
+            [this](std::shared_ptr<IConnectionSocket> socket, std::vector<std::byte> data) {
+                this->onReceive(data);
+            }
+        );
+
+        if (!socket)
         {
+            Debug::Logger::printf("[Client] Failed to connect.");
             return false;
         }
+
+        connection = std::make_shared<Connection>(socket);
+
+        // start loop
         isRunning = true;
+
+        if (receiveThread.joinable())
+        {
+            receiveThread.join();
+        }
+
         receiveThread = std::thread(&Client::receiveLoop, this);
+
+        Debug::Logger::printf("[Client] Connected to server.");
         return true;
     }
 
     void Client::disconnect()
     {
         isRunning = false;
+
         if (receiveThread.joinable())
         {
-            receiveThread.join();
+            if (receiveThread.get_id() == std::this_thread::get_id())
+            {
+                // allow death of receiving thread
+                receiveThread.detach();
+            }
+            else
+            {
+                receiveThread.join();
+            }
         }
+
         connection.reset();
     }
 
     void Client::send(std::unique_ptr<Protocol::IData> data)
     {
         if (connection)
-        {
             connection->send(std::move(data));
-        }
     }
 
     void Client::receiveLoop()
     {
         while (isRunning)
         {
-            if (connection)
+            auto conn = connection;
+            if (!conn)
+                break;
+
+            auto sock = conn->getSocket();
+            if (!sock)
+                break;
+
+            auto received = sock->receive();
+            if (!received)
             {
-                auto received = connection->getSocket()->receive();
-                if(received) onReceive(received.value());
+                // soft exit。onDisconnect は呼ばない
+                break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Prevent busy-waiting
+
+            onReceive(received.value());
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+
+        // receiveLoop が終わったということは切断されたということなので、
+        // メインスレッドに復帰させて再接続
+        if (!reconnecting.exchange(true))
+        {
+            std::thread([this]() {
+                Debug::Logger::printf("[Aurora] Disconnected. Reconnecting in 5 seconds...");
+                disconnect();
+
+                while (true)
+                {
+                    std::this_thread::sleep_for(std::chrono::seconds(5));
+                    Debug::Logger::printf("[Aurora] Trying to reconnect...");
+
+                    if (this->connect(this->lastIp, this->lastPort))
+                    {
+                        Debug::Logger::printf("[Aurora] Reconnected!");
+                        reconnecting.store(false);
+                        break;
+                    }
+                }
+            }).detach();
         }
     }
 
-    void Client::onReceive(std::vector<std::byte> data)
+    void Client::onReceive(const std::vector<std::byte>& data)
     {
         if (data.size() < sizeof(Protocol::ID))
-        {
-            Debug::Logger::printf("Received data size ({}) is less than Protocol::ID size ({}). Dispatching InvalidData.", data.size(), sizeof(Protocol::ID));
             return;
-        }
 
         Data::ByteReader reader(data);
         Protocol::ID id = static_cast<Protocol::ID>(reader.read<int>());
-        Debug::Logger::printf("[Received] ID: {}", static_cast<uint32_t>(id));
 
-        std::vector<std::byte> payload(reader.readBytes(reader.remain()));
-        std::unique_ptr<Protocol::IData> protocolData(registry->deserialize(id, payload));
-        if(protocolData == nullptr) return;
-        protocolData->process(connection);
+        std::vector<std::byte> payload = reader.readBytes(reader.remain());
+        auto protocolData = std::unique_ptr<Protocol::IData>(registry->deserialize(id, payload));
+
+        if (protocolData)
+            protocolData->process(connection);
+    }
+
+    bool Client::isConnected() const
+    {
+        return connection != nullptr;
     }
 }

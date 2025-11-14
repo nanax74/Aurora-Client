@@ -20,23 +20,17 @@ namespace Net::Transport
 
     std::optional<std::vector<std::byte>> TcpConnectionSocket::receive()
     {
-        if (fd == INVALID_SOCKET) return std::nullopt;
+        if (!fd) return std::nullopt;
 
-        u_long available = 0;
-        if (ioctlsocket(fd, FIONREAD, &available) != 0) {
-            return std::nullopt;
-        }
+        std::vector<std::byte> buffer(1024 * 4);
+        int received = ::recv(fd, reinterpret_cast<char*>(buffer.data()), buffer.size(), 0);
 
-        if (available == 0) return std::nullopt;
-
-        std::vector<std::byte> buffer = std::vector<std::byte>(available);
-        int res = ::recv(fd, (char*)buffer.data(), buffer.size(), 0);
-        if (res <= 0)
+        if (received <= 0)
         {
             return std::nullopt;
         }
 
-        buffer.resize((res));
+        buffer.resize(received);
         return buffer;
     }
 
